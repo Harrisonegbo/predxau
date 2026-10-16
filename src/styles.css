@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root,
+[data-theme="dark"] {
+  --bg: #100e0b;
+  --panel: #1b1713;
+  --line: #343029;
+  --gold: #e4b15a;
+  --gold-wash: rgba(228, 177, 90, 0.16);
+  --cream: #f6f1e8;
+  --mute: #a3988c;
+  --bull: #2fbe86;
+  --bear: #e25b4c;
+  --ink: #14110d;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f6f1e8;
+  --panel: #fffdf8;
+  --line: #e3d9c8;
+  --gold: #9a6b16;
+  --gold-wash: rgba(154, 107, 22, 0.14);
+  --cream: #1c1814;
+  --mute: #6f675e;
+  --bull: #0f7a52;
+  --bear: #b43328;
+  --ink: #fffaf2;
+  color-scheme: light;
+}
+
+@theme {
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-mute: var(--mute);
+  --color-bull: var(--bull);
+  --color-bear: var(--bear);
+  --color-ink: var(--ink);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--cream);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  label:has(input[type="file"]) {
+    cursor: pointer;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
