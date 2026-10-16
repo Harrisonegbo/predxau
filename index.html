@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="XAUUSD Gold Price Monitor - Track US Economic & Geopolitical News Impact on Gold with scoring, charts, calendar & predictions. Works offline.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥇</text></svg>">
+  <title>PredXAU — XAUUSD pre-move desk</title>
+  <link rel="preconnect" href="https://biquote.io" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://freenewsapi.ai">
+  <link rel="dns-prefetch" href="https://api.goldprice.dev">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #f59e0b;
+      --accent2: #10b981;
+      --danger: #ef4444;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --border: #334155;
+      --hover: #334155;
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --accent: #d97706;
+      --accent2: #059669;
+      --danger: #dc2626;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --hover: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      transition: background 0.25s, color 0.25s;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.15);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .logo span { color: var(--accent); }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: pulse 2s infinite;
+    }
+    .dot.offline { background: var(--danger); animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    nav {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    nav button, .icon-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    nav button:hover, nav button.active, .icon-btn:hover {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+    .icon-btn { padding: 0.4rem 0.6rem; font-size: 1rem; }
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.25rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      transition: background 0.25s, border-color 0.25s;
+    }
+    .card h2 {
+      font-size: 1.05rem;
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--accent);
+    }
+    .price-display { text-align: center; padding: 1.1rem 0; }
+    .price-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+    .price-change { font-size: 1.05rem; margin-top: 0.2rem; }
+    .price-change.up { color: var(--accent2); }
+    .price-change.down { color: var(--danger); }
+    .meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+    .btn {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); opacity: 0.92; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 0.3rem 0.65rem; font-size: 0.78rem; }
+    .news-item {
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 0;
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-title {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .news-title a { color: inherit; text-decoration: none; }
+    .news-title a:hover { color: var(--accent); }
+    .news-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .score-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.45rem;
+    }
+    .score-btn {
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .score-btn:hover { background: var(--accent); color: #0f172a; }
+    .score-value {
+      min-width: 38px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .score-value.pos { color: var(--accent2); }
+    .score-value.neg { color: var(--danger); }
+    .impact-badge {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .impact-badge.bullish { background: rgba(16,185,129,0.18); color: var(--accent2); }
+    .impact-badge.bearish { background: rgba(239,68,68,0.18); color: var(--danger); }
+    .impact-badge.neutral { background: rgba(148,163,184,0.18); color: var(--muted); }
+    .prediction-box {
+      text-align: center;
+      padding: 0.9rem;
+      border-radius: 10px;
+      margin: 0.6rem 0;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+    .pred-horizon { font-size: 0.8rem; color: var(--muted); }
+    .pred-direction {
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin: 0.2rem 0;
+    }
+    .pred-direction.up { color: var(--accent2); }
+    .pred-direction.down { color: var(--danger); }
+    .pred-direction.side { color: var(--muted); }
+    .pred-range { font-size: 0.9rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 0.55rem 0.4rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 1.8rem;
+    }
+    .filters {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.9rem;
+    }
+    .filters input, .filters select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.7rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    footer {
+      text-align: center;
+      padding: 1.8rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+      margin-top: 1.5rem;
+    }
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 0.7rem 1.15rem;
+      border-radius: 8px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: all 0.3s;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .chart-container {
+      position: relative;
+      height: 280px;
+      width: 100%;
+    }
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .cal-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .cal-item:last-child { border-bottom: none; }
+    .cal-name { font-weight: 600; }
+    .cal-time { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+    .cal-vals { font-size: 0.8rem; color: var(--muted); }
+    .suggest {
+      font-size: 0.75rem;
+      color: var(--accent);
+      cursor: pointer;
+      margin-left: 0.3rem;
+    }
+    .suggest:hover { text-decoration: underline; }
+    @media (max-width: 640px) {
+      .price-value { font-size: 1.9rem; }
+      header { padding: 0.65rem 0.85rem; }
+      .chart-container { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">🥇 <span>PredXAU</span></div>
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Online • Monitoring</span>
+    </div>
+    <nav>
+      <button class="active" data-section="dashboard">Dashboard</button>
+      <button data-section="news">News</button>
+      <button data-section="calendar">Calendar</button>
+      <button data-section="scores">Scores</button>
+      <button data-section="predict">Predict</button>
+      <button data-section="settings">Settings</button>
+      <button class="icon-btn" id="themeToggle" title="Toggle theme">🌓</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="section active">
+      <div class="grid">
+        <div class="card">
+          <h2>📈 Live XAUUSD</h2>
+          <div class="price-display">
+            <div class="price-value" id="livePrice">—</div>
+            <div class="price-change" id="priceChange">Fetching...</div>
+            <div class="meta" id="priceMeta">Source: —</div>
+          </div>
+          <button class="btn" id="refreshPrice" style="width:100%">Refresh</button>
+        </div>
+
+        <div class="card">
+          <h2>🎯 Aggregate Impact</h2>
+          <div class="price-display">
+            <div class="price-value" id="aggScore" style="color:var(--text)">0.0</div>
+            <div class="meta">Weighted avg of scored news (−10 to +10)</div>
+            <div class="meta" id="scoreCount">0 news scored</div>
+          </div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-top:0.6rem">
+            + = Bullish (safe-haven / dovish)<br>
+            − = Bearish (strong USD / hawkish)
+          </p>
+        </div>
+
+        <div class="card" style="border:1px solid var(--accent);">
+          <h2>🤖 AI Pre-Move Signal</h2>
+          <div class="price-display">
+            <div class="price-value" id="liveSignalDir" style="font-size:1.8rem;">—</div>
+            <div id="liveSignalStrength" style="font-size:1.1rem;font-weight:700;margin:0.3rem 0;">Signal: —</div>
+            <div class="meta" id="liveSignalMeta">AI engine initializing...</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">
+            <span>P(Up): <b id="liveProbUp">—</b></span>
+            <span>Conf: <b id="liveConf">—</b></span>
+          </div>
+          <div id="aiReasoning" style="margin-top:0.7rem;font-size:0.78rem;color:var(--muted);line-height:1.45;border-top:1px solid var(--border);padding-top:0.55rem;"></div>
+        </div>
+
+        <div class="card">
+          <h2>🔮 Pre-Move Outlook</h2>
+          <div id="quickPreds">
+            <div class="prediction-box">
+              <div class="pred-horizon">2 Days</div>
+              <div class="pred-direction side" id="pred2d">SIDEWAYS</div>
+              <div class="pred-range" id="range2d">—</div>
+            </div>
+            <div class="prediction-box">
+              <div class="pred-horizon">1 Week</div>
+              <div class="pred-direction side" id="pred1w">SIDEWAYS</div>
+              <div class="pred-range" id="range1w">—</div>
+            </div>
+            <div class="prediction-box">
+              <div class="pred-horizon">1 Month</div>
+              <div class="pred-direction side" id="pred1m">SIDEWAYS</div>
+              <div class="pred-range" id="range1m">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.1rem">
+        <h2>🏛️ Market Maker Structure</h2>
+        <div id="structurePanel">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;margin-bottom:0.9rem;">
+            <div class="prediction-box" style="margin:0;">
+              <div class="pred-horizon">Structure Bias</div>
+              <div class="pred-direction side" id="structBias">—</div>
+            </div>
+            <div class="prediction-box" style="margin:0;">
+              <div class="pred-horizon">Last Event</div>
+              <div class="pred-direction side" id="structEvent" style="font-size:1rem;">—</div>
+            </div>
+            <div class="prediction-box" style="margin:0;">
+              <div class="pred-horizon">Zone</div>
+              <div class="pred-direction side" id="structZone" style="font-size:1rem;">—</div>
+            </div>
+          </div>
+          <div style="font-size:0.82rem;color:var(--muted);line-height:1.5;" id="structDetails">
+            Analyzing swing structure, BOS/CHoCH, Fair Value Gaps & liquidity...
+          </div>
+          <div style="margin-top:0.6rem;font-size:0.8rem;" id="structLevels"></div>
+          <div class="chart-container" style="height:260px;margin-top:0.9rem;">
+            <canvas id="structChart"></canvas>
+          </div>
+          <div class="meta" id="structChartMeta" style="margin-top:0.35rem;">Live candlesticks + structure levels</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.1rem">
+        <h2>📊 Price Chart (Daily)</h2>
+        <div class="chart-container">
+          <canvas id="priceChart"></canvas>
+        </div>
+        <div class="meta" id="chartMeta" style="margin-top:0.5rem">Loading chart data...</div>
+      </div>
+
+      <div class="card" style="margin-top:1.1rem">
+        <h2>🔥 Recently Scored News</h2>
+        <div id="recentScored">
+          <div class="empty">No scored news yet. Go to News and rate impacts.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWS -->
+    <section id="news" class="section">
+      <div class="card">
+        <h2>📰 US Economic & Geopolitical News</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.9rem">
+          Focused on drivers of XAUUSD: Fed, inflation, yields, USD, geopolitics, safe-haven flows.
+        </p>
+        <div class="filters">
+          <input type="text" id="newsQuery" value="US Fed OR inflation OR Treasury yields OR geopolitical OR Iran OR China OR tariff gold OR XAU" style="flex:1;min-width:180px">
+          <select id="newsSize">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="30">30</option>
+          </select>
+          <button class="btn" id="scanNews">Scan News</button>
+        </div>
+        <div id="newsList">
+          <div class="empty">Click “Scan News” to load latest articles (online required for fresh data).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section id="calendar" class="section">
+      <div class="card">
+        <h2>📅 US High-Impact Economic Calendar</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.9rem">
+          Upcoming high-importance US releases that often move gold (CPI, NFP, Fed, etc.).
+        </p>
+        <button class="btn" id="loadCalendar" style="margin-bottom:1rem">Load / Refresh Calendar</button>
+        <div id="calendarList">
+          <div class="empty">Click the button to load the calendar.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCORES -->
+    <section id="scores" class="section">
+      <div class="card">
+        <h2>📊 Recorded Impact Scores</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.9rem">
+          Stored locally in your browser. Fully offline.
+        </p>
+        <div style="margin-bottom:0.9rem;display:flex;gap:0.45rem;flex-wrap:wrap">
+          <button class="btn btn-secondary" id="exportScores">Export JSON</button>
+          <button class="btn btn-secondary" id="importScores">Import JSON</button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+          <button class="btn btn-danger" id="clearScores">Clear All</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Score</th>
+                <th>Impact</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="scoresTable">
+              <tr><td colspan="5" class="empty">No scores yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREDICT -->
+    <section id="predict" class="section">
+      <div class="card">
+        <h2>🤖 AI Pre-Move Engine (Ensemble + Structure)</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.9rem">
+          Client-side ensemble AI that anticipates XAUUSD moves <strong>before</strong> they fully develop.
+          Four specialist models vote: <b>News AI</b>, <b>Technical AI</b>, <b>Macro AI</b>, and <b>Structure AI</b>
+          (Market Maker concepts: BOS/CHoCH, Fair Value Gaps, Premium/Discount zones, swing structure).
+          Educational tool only — not financial advice.
+        </p>
+        <div class="grid" style="margin-bottom:1.3rem">
+          <div class="prediction-box">
+            <div class="pred-horizon">2-Day Outlook</div>
+            <div class="pred-direction side" id="fullPred2d">SIDEWAYS</div>
+            <div class="pred-range" id="fullRange2d">—</div>
+            <div class="meta" id="conf2d">Confidence: —</div>
+          </div>
+          <div class="prediction-box">
+            <div class="pred-horizon">1-Week Outlook</div>
+            <div class="pred-direction side" id="fullPred1w">SIDEWAYS</div>
+            <div class="pred-range" id="fullRange1w">—</div>
+            <div class="meta" id="conf1w">Confidence: —</div>
+          </div>
+          <div class="prediction-box">
+            <div class="pred-horizon">1-Month Outlook</div>
+            <div class="pred-direction side" id="fullPred1m">SIDEWAYS</div>
+            <div class="pred-range" id="fullRange1m">—</div>
+            <div class="meta" id="conf1m">Confidence: —</div>
+          </div>
+        </div>
+        <h3 style="margin-bottom:0.6rem;color:var(--accent);font-size:1rem">Key Drivers</h3>
+        <ul id="driversList" style="color:var(--muted);font-size:0.88rem;padding-left:1.2rem">
+          <li>No high-impact scored news yet.</li>
+        </ul>
+        <button class="btn" id="recalcPred" style="margin-top:0.9rem">Recalculate</button>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="section">
+      <div class="card">
+        <h2>⚙️ Settings & Offline</h2>
+        <p style="margin-bottom:0.9rem;color:var(--muted);font-size:0.88rem">
+          App works offline after first load. Scores are always local. Price & news use cache when offline.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:0.7rem">
+          <label style="display:flex;align-items:center;gap:0.45rem">
+            <input type="checkbox" id="autoRefresh" checked>
+            Auto-refresh live price every 25s (online)
+          </label>
+          <label style="display:flex;align-items:center;gap:0.45rem">
+            <input type="checkbox" id="notifToggle">
+            Browser notifications for high-impact news / big price moves
+          </label>
+          <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn" id="installPwa">Install as App</button>
+            <button class="btn btn-secondary" id="clearCache">Clear Cache</button>
+          </div>
+        </div>
+        <div class="meta" style="margin-top:1.3rem">
+          Sources: biquote.io (live mid + multi-TF OHLC), goldprice.dev (fallback), freenewsapi.ai (news), biquote calendar.<br>
+          Scoring & predictions run 100% in your browser.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    PredXAU · predxau.com · Educational only · Not financial advice
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== STATE ==========
+    let currentPrice = null;
+    let lastPrice = null;
+    let scoredNews = JSON.parse(localStorage.getItem('xau_scored') || '[]');
+    let cachedNews = JSON.parse(localStorage.getItem('xau_news_cache') || '[]');
+    let isOnline = navigator.onLine;
+    let autoRefreshInterval = null;
+    let deferredPrompt = null;
+    let priceChart = null;
+    let structChart = null;
+    let recentBars = [];          // latest OHLC for momentum
+    let calendarEvents = [];      // for calendar pressure
+    const tempScores = {};
+    // Performance helpers
+    let predCacheKey = '';
+    let predCache = null;
+    let predScheduled = false;
+
+    // Keyword heuristics for auto-suggest
+    const BULLISH_KW = ['war', 'conflict', 'geopolitical', 'tension', 'safe haven', 'dovish', 'rate cut', 'pivot', 'recession', 'crisis', 'inflation hedge', 'central bank buy', 'weak dollar', 'falling yields', 'risk off'];
+    const BEARISH_KW = ['rate hike', 'hawkish', 'strong dollar', 'rising yields', 'fed hike', 'tightening', 'strong usd', 'higher rates', 'risk on', 'strong data', 'hot inflation'];
+
+    // ========== UTILS ==========
+    function toast(msg, duration = 2800) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    function formatPrice(p) {
+      return p != null ? Number(p).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    }
+
+    function impactLabel(score) {
+      if (score >= 3) return { text: 'Bullish', cls: 'bullish' };
+      if (score <= -3) return { text: 'Bearish', cls: 'bearish' };
+      return { text: 'Neutral', cls: 'neutral' };
+    }
+
+    function suggestScore(title = '', desc = '') {
+      const text = (title + ' ' + desc).toLowerCase();
+      let score = 0;
+      BULLISH_KW.forEach(k => { if (text.includes(k)) score += 2; });
+      BEARISH_KW.forEach(k => { if (text.includes(k)) score -= 2; });
+      return Math.max(-8, Math.min(8, score));
+    }
+
+    function updateOnlineStatus() {
+      isOnline = navigator.onLine;
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (isOnline) {
+        dot.classList.remove('offline');
+        txt.textContent = 'Online • Monitoring';
+      } else {
+        dot.classList.add('offline');
+        txt.textContent = 'Offline • Using Cache';
+      }
+    }
+
+    // ========== THEME ==========
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('xau_theme', theme);
+      const isDark = theme === 'dark';
+      if (priceChart) {
+        priceChart.options.scales.x.ticks.color = isDark ? '#94a3b8' : '#64748b';
+        priceChart.options.scales.y.ticks.color = isDark ? '#94a3b8' : '#64748b';
+        priceChart.options.scales.x.grid.color = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.15)';
+        priceChart.options.scales.y.grid.color = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.15)';
+        priceChart.update();
+      }
+      // rebuild structure candlestick on theme change for correct colors
+      if (lastStructure) renderStructChart(lastStructure);
+    }
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    });
+    setTheme(localStorage.getItem('xau_theme') || 'dark');
+
+    // ========== PRICE (multi-source, live-first, very fast) ==========
+    async function fetchPrice() {
+      if (!isOnline) {
+        const cached = localStorage.getItem('xau_price_cache');
+        if (cached) {
+          const data = JSON.parse(cached);
+          currentPrice = data.price;
+          renderPrice(data);
+          return;
+        }
+        return;
+      }
+
+      // Parallel race: biquote (true live mid) is primary, goldprice.dev as backup
+      const sources = [
+        async () => {
+          const r = await fetch('https://biquote.io/api/XAUUSD', { signal: AbortSignal.timeout(3500) });
+          const d = await r.json();
+          const price = d.mid || ((d.bid + d.ask) / 2);
+          if (!price || price < 1000) throw new Error('bad biquote');
+          return { price: +price, source: 'biquote.io (live)', bid: d.bid, ask: d.ask, high: d.high, low: d.low };
+        },
+        async () => {
+          const r = await fetch('https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT', { signal: AbortSignal.timeout(3500) });
+          const d = await r.json();
+          const price = parseFloat(d.symbols?.[0]?.price);
+          if (!price) throw new Error('bad goldprice');
+          return { price, source: 'goldprice.dev' };
+        }
+      ];
+
+      try {
+        // Prefer first successful source (biquote is first)
+        let result = null;
+        for (const fn of sources) {
+          try {
+            result = await fn();
+            if (result) break;
+          } catch {}
+        }
+        if (!result) throw new Error('all sources failed');
+
+        lastPrice = currentPrice;
+        currentPrice = result.price;
+        const payload = {
+          price: result.price,
+          change: lastPrice != null ? result.price - lastPrice : 0,
+          time: new Date().toISOString(),
+          source: result.source,
+          bid: result.bid,
+          ask: result.ask
+        };
+        localStorage.setItem('xau_price_cache', JSON.stringify(payload));
+        renderPrice(payload);
+        schedulePredictions(); // instant AI update on new tick
+
+        if (document.getElementById('notifToggle')?.checked && lastPrice && Math.abs(payload.change) / lastPrice > 0.006) {
+          notify('XAUUSD Move', `${payload.change >= 0 ? '+' : ''}${formatPrice(payload.change)} → $${formatPrice(result.price)}`);
+        }
+      } catch (e) {
+        const cached = localStorage.getItem('xau_price_cache');
+        if (cached) renderPrice(JSON.parse(cached));
+      }
+    }
+
+    function renderPrice(data) {
+      document.getElementById('livePrice').textContent = '$' + formatPrice(data.price);
+      const chEl = document.getElementById('priceChange');
+      if (data.change !== undefined && lastPrice != null && Math.abs(data.change) > 0.01) {
+        const pct = (data.change / lastPrice * 100).toFixed(3);
+        chEl.textContent = (data.change >= 0 ? '+' : '') + formatPrice(data.change) + ' (' + pct + '%)';
+        chEl.className = 'price-change ' + (data.change >= 0 ? 'up' : 'down');
+      } else {
+        chEl.textContent = data.bid ? `Bid ${formatPrice(data.bid)} / Ask ${formatPrice(data.ask)}` : 'Live spot (troy oz)';
+        chEl.className = 'price-change';
+      }
+      document.getElementById('priceMeta').textContent =
+        `Source: ${data.source || 'live'} • ${new Date(data.time || Date.now()).toLocaleTimeString()}`;
+    }
+
+    // ========== CHART + multi-TF bars for AI precision ==========
+    let hourlyBars = [];
+    async function loadChart() {
+      const meta = document.getElementById('chartMeta');
+      if (!window.Chart) {
+        meta.textContent = 'Loading chart library...';
+        return;
+      }
+      meta.innerHTML = '<span class="spinner"></span>Loading live OHLC...';
+      try {
+        let bars = [];
+        if (isOnline) {
+          // Parallel fetch daily + hourly for precise short-term model
+          const [dRes, hRes] = await Promise.all([
+            fetch('https://biquote.io/api/XAUUSD/ohlc?interval=1d&limit=40', { signal: AbortSignal.timeout(5000) }),
+            fetch('https://biquote.io/api/XAUUSD/ohlc?interval=1h&limit=48', { signal: AbortSignal.timeout(5000) })
+          ]);
+          const dData = await dRes.json();
+          const hData = await hRes.json();
+          bars = (dData.bars || []).reverse();
+          hourlyBars = (hData.bars || []).reverse();
+          localStorage.setItem('xau_ohlc_cache', JSON.stringify(bars));
+          localStorage.setItem('xau_hourly_cache', JSON.stringify(hourlyBars));
+        } else {
+          bars = JSON.parse(localStorage.getItem('xau_ohlc_cache') || '[]');
+          hourlyBars = JSON.parse(localStorage.getItem('xau_hourly_cache') || '[]');
+        }
+        recentBars = bars;
+        if (!bars.length) {
+          meta.textContent = 'No chart data available.';
+          return;
+        }
+        const labels = bars.map(b => new Date(b.openTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+        const closes = bars.map(b => b.close);
+        // Simple 8-period SMA
+        const sma = closes.map((_, i, arr) => {
+          if (i < 7) return null;
+          const slice = arr.slice(i - 7, i + 1);
+          return slice.reduce((a, b) => a + b, 0) / 8;
+        });
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        if (priceChart) priceChart.destroy();
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        priceChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'XAUUSD Close',
+                data: closes,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.10)',
+                fill: true,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+              },
+              {
+                label: 'SMA(8)',
+                data: sma,
+                borderColor: isDark ? '#64748b' : '#94a3b8',
+                borderWidth: 1.5,
+                borderDash: [4, 3],
+                pointRadius: 0,
+                fill: false,
+                tension: 0.2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,          // instant render for max speed
+            plugins: {
+              legend: {
+                display: true,
+                labels: { color: isDark ? '#94a3b8' : '#64748b', boxWidth: 12, font: { size: 11 } }
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  label: ctx => (ctx.dataset.label || '') + ': $' + (ctx.raw != null ? formatPrice(ctx.raw) : '—')
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: isDark ? '#94a3b8' : '#64748b', maxTicksLimit: 8 },
+                grid: { color: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.12)' }
+              },
+              y: {
+                ticks: {
+                  color: isDark ? '#94a3b8' : '#64748b',
+                  callback: v => '$' + v.toLocaleString()
+                },
+                grid: { color: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.12)' }
+              }
+            },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false }
+          }
+        });
+        meta.textContent = `${bars.length} daily + ${hourlyBars.length} hourly bars • Live source: biquote.io`;
+        analyzeMarketStructure();
+        renderStructure();
+        schedulePredictions(); // feed fresh multi-TF + structure into AI
+      } catch (e) {
+        console.error(e);
+        meta.textContent = 'Chart load failed. Try again online.';
+      }
+    }
+
+    // ========== NEWS ==========
+    async function scanNews() {
+      const query = document.getElementById('newsQuery').value.trim() || 'US Fed inflation geopolitical gold';
+      const size = document.getElementById('newsSize').value;
+      const list = document.getElementById('newsList');
+
+      if (!isOnline) {
+        if (cachedNews.length) {
+          renderNewsList(cachedNews);
+          toast('Cached news (offline)');
+        } else {
+          list.innerHTML = '<div class="empty">Offline and no cached news.</div>';
+        }
+        return;
+      }
+
+      list.innerHTML = '<div class="empty"><span class="spinner"></span>Scanning news...</div>';
+      try {
+        const url = `https://freenewsapi.ai/v1/search?q=${encodeURIComponent(query)}&lang=en&size=${size}&sort=date`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const results = data.results || [];
+        cachedNews = results;
+        localStorage.setItem('xau_news_cache', JSON.stringify(results));
+        renderNewsList(results);
+        toast(`Loaded ${results.length} articles`);
+      } catch (e) {
+        console.error(e);
+        list.innerHTML = '<div class="empty">Fetch failed. Showing cache if available.</div>';
+        if (cachedNews.length) renderNewsList(cachedNews);
+      }
+    }
+
+    function renderNewsList(items) {
+      const list = document.getElementById('newsList');
+      if (!items.length) {
+        list.innerHTML = '<div class="empty">No articles found.</div>';
+        return;
+      }
+      list.innerHTML = items.map((item, idx) => {
+        const id = item.id || String(idx);
+        const existing = scoredNews.find(s => s.id === id || s.url === item.url);
+        let score = existing ? existing.score : (tempScores[id] ?? 0);
+        if (!existing && tempScores[id] === undefined) {
+          const sug = suggestScore(item.title, item.description);
+          if (sug !== 0) tempScores[id] = sug;
+          score = tempScores[id] ?? 0;
+        }
+        const label = impactLabel(score);
+        const sug = suggestScore(item.title, item.description);
+        return `
+          <div class="news-item" data-id="${id}">
+            <div class="news-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title || 'Untitled'}</a></div>
+            <div class="news-meta">${item.host || ''} • ${item.published_at ? new Date(item.published_at).toLocaleString() : ''} • ${item.country || ''}</div>
+            <p style="font-size:0.83rem;color:var(--muted);margin:0.3rem 0">${(item.description || '').slice(0, 170)}${(item.description||'').length > 170 ? '…' : ''}</p>
+            <div class="score-controls">
+              <span style="font-size:0.8rem;color:var(--muted)">Impact:</span>
+              <button class="score-btn" onclick="adjustScore('${id}', -1)">−</button>
+              <span class="score-value ${score > 0 ? 'pos' : score < 0 ? 'neg' : ''}" id="score-${id}">${score > 0 ? '+' : ''}${score}</span>
+              <button class="score-btn" onclick="adjustScore('${id}', 1)">+</button>
+              <span class="impact-badge ${label.cls}">${label.text}</span>
+              ${sug !== 0 && !existing ? `<span class="suggest" onclick="applySuggest('${id}', ${sug})" title="Apply keyword suggestion">Suggest ${sug > 0 ? '+' : ''}${sug}</span>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="saveScore('${id}')">Save</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function adjustScore(id, delta) {
+      if (tempScores[id] === undefined) {
+        const existing = scoredNews.find(s => s.id === id);
+        tempScores[id] = existing ? existing.score : 0;
+      }
+      tempScores[id] = Math.max(-10, Math.min(10, tempScores[id] + delta));
+      const el = document.getElementById('score-' + id);
+      if (el) {
+        el.textContent = (tempScores[id] > 0 ? '+' : '') + tempScores[id];
+        el.className = 'score-value ' + (tempScores[id] > 0 ? 'pos' : tempScores[id] < 0 ? 'neg' : '');
+      }
+      const badge = el?.closest('.score-controls')?.querySelector('.impact-badge');
+      if (badge) {
+        const lab = impactLabel(tempScores[id]);
+        badge.textContent = lab.text;
+        badge.className = 'impact-badge ' + lab.cls;
+      }
+    }
+
+    function applySuggest(id, val) {
+      tempScores[id] = val;
+      adjustScore(id, 0);
+    }
+
+    function saveScore(id) {
+      const item = cachedNews.find(n => (n.id || '') === id) || { id, title: 'Unknown' };
+      const score = tempScores[id] !== undefined ? tempScores[id] : 0;
+      const entry = {
+        id: item.id || id,
+        url: item.url,
+        title: item.title,
+        host: item.host,
+        published_at: item.published_at,
+        score,
+        scored_at: new Date().toISOString()
+      };
+      const idx = scoredNews.findIndex(s => s.id === entry.id || s.url === entry.url);
+      if (idx >= 0) scoredNews[idx] = entry;
+      else scoredNews.unshift(entry);
+      localStorage.setItem('xau_scored', JSON.stringify(scoredNews));
+      toast(`Saved ${score > 0 ? '+' : ''}${score}`);
+      updateAggregate();
+      renderScoresTable();
+      schedulePredictions();
+      if (document.getElementById('notifToggle').checked && Math.abs(score) >= 5) {
+        notify('High Impact Scored', `${score > 0 ? '+' : ''}${score}: ${entry.title.slice(0, 60)}`);
+      }
+    }
+
+    // ========== CALENDAR ==========
+    async function loadCalendar() {
+      const list = document.getElementById('calendarList');
+      list.innerHTML = '<div class="empty"><span class="spinner"></span>Loading calendar...</div>';
+      try {
+        if (!isOnline) {
+          const cached = localStorage.getItem('xau_cal_cache');
+          if (cached) {
+            renderCalendar(JSON.parse(cached));
+            toast('Cached calendar (offline)');
+            return;
+          }
+          list.innerHTML = '<div class="empty">Offline – no cached calendar.</div>';
+          return;
+        }
+        const res = await fetch('https://biquote.io/api/calendar?importance=high&countries=US');
+        const data = await res.json();
+        const events = Array.isArray(data) ? data.slice(0, 25) : [];
+        calendarEvents = events;
+        localStorage.setItem('xau_cal_cache', JSON.stringify(events));
+        renderCalendar(events);
+        toast(`Loaded ${events.length} events`);
+        schedulePredictions(); // refresh model with calendar pressure
+      } catch (e) {
+        console.error(e);
+        list.innerHTML = '<div class="empty">Failed to load calendar.</div>';
+      }
+    }
+
+    function renderCalendar(events) {
+      const list = document.getElementById('calendarList');
+      if (!events.length) {
+        list.innerHTML = '<div class="empty">No upcoming high-impact events found.</div>';
+        return;
+      }
+      list.innerHTML = events.map(ev => {
+        const t = new Date(ev.time);
+        const actual = ev.actual != null ? ev.actual : '—';
+        const forecast = ev.forecast != null ? ev.forecast : '—';
+        const prev = ev.previous != null ? ev.previous : '—';
+        return `
+          <div class="cal-item">
+            <div>
+              <div class="cal-name">${ev.name}</div>
+              <div class="cal-vals">Actual: ${actual} • Forecast: ${forecast} • Prev: ${prev}</div>
+            </div>
+            <div class="cal-time">${t.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ========== SCORES TABLE ==========
+    function renderScoresTable() {
+      const tbody = document.getElementById('scoresTable');
+      if (!scoredNews.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No scores recorded yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = scoredNews.map((s, i) => {
+        const lab = impactLabel(s.score);
+        return `<tr>
+          <td>${new Date(s.scored_at).toLocaleDateString()}</td>
+          <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.title || ''}">${s.title || '—'}</td>
+          <td style="font-weight:700;color:${s.score > 0 ? 'var(--accent2)' : s.score < 0 ? 'var(--danger)' : 'inherit'}">${s.score > 0 ? '+' : ''}${s.score}</td>
+          <td><span class="impact-badge ${lab.cls}">${lab.text}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="removeScore(${i})">×</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function removeScore(idx) {
+      scoredNews.splice(idx, 1);
+      localStorage.setItem('xau_scored', JSON.stringify(scoredNews));
+      renderScoresTable();
+      updateAggregate();
+      schedulePredictions();
+      toast('Removed');
+    }
+
+    // ========== AGGREGATE & PREDICTIONS ==========
+    function updateAggregate() {
+      if (!scoredNews.length) {
+        document.getElementById('aggScore').textContent = '0.0';
+        document.getElementById('scoreCount').textContent = '0 news scored';
+        document.getElementById('recentScored').innerHTML = '<div class="empty">No scored news yet.</div>';
+        return;
+      }
+      let weightedSum = 0, weightTotal = 0;
+      scoredNews.forEach((s, i) => {
+        const recency = Math.max(0.25, 1 - i * 0.045);
+        const magnitude = 1 + Math.abs(s.score) * 0.06;
+        const w = recency * magnitude;
+        weightedSum += s.score * w;
+        weightTotal += w;
+      });
+      const avg = weightTotal ? weightedSum / weightTotal : 0;
+      document.getElementById('aggScore').textContent = (avg >= 0 ? '+' : '') + avg.toFixed(1);
+      document.getElementById('aggScore').style.color = avg > 1 ? 'var(--accent2)' : avg < -1 ? 'var(--danger)' : 'var(--text)';
+      document.getElementById('scoreCount').textContent = scoredNews.length + ' news scored';
+
+      document.getElementById('recentScored').innerHTML = scoredNews.slice(0, 5).map(s => {
+        const lab = impactLabel(s.score);
+        return `<div class="news-item">
+          <div class="news-title">${s.title || '—'}</div>
+          <div class="news-meta">${new Date(s.scored_at).toLocaleString()} • <strong style="color:${s.score>0?'var(--accent2)':s.score<0?'var(--danger)':'inherit'}">${s.score>0?'+':''}${s.score}</strong> <span class="impact-badge ${lab.cls}">${lab.text}</span></div>
+        </div>`;
+      }).join('');
+    }
+
+    /**
+     * Market Maker Structure Engine
+     * -----------------------------
+     * Approximates institutional / market-maker concepts from OHLC:
+     *  - Swing structure (HH/HL vs LH/LL)
+     *  - Break of Structure (BOS) & Change of Character (CHoCH)
+     *  - Fair Value Gaps (3-candle imbalances)
+     *  - Premium / Discount zones relative to recent range
+     *  - Key liquidity levels (recent swing highs/lows)
+     */
+    let lastStructure = null;
+
+    function findSwings(bars, left = 2, right = 2) {
+      const swings = []; // {i, type:'H'|'L', price}
+      for (let i = left; i < bars.length - right; i++) {
+        let isHigh = true, isLow = true;
+        for (let j = 1; j <= left; j++) {
+          if (bars[i].high <= bars[i-j].high) isHigh = false;
+          if (bars[i].low  >= bars[i-j].low)  isLow  = false;
+        }
+        for (let j = 1; j <= right; j++) {
+          if (bars[i].high <= bars[i+j].high) isHigh = false;
+          if (bars[i].low  >= bars[i+j].low)  isLow  = false;
+        }
+        if (isHigh) swings.push({ i, type: 'H', price: bars[i].high });
+        if (isLow)  swings.push({ i, type: 'L', price: bars[i].low });
+      }
+      return swings;
+    }
+
+    function detectFVGs(bars, lookback = 30) {
+      const fvgs = [];
+      const start = Math.max(2, bars.length - lookback);
+      for (let i = start; i < bars.length; i++) {
+        const c0 = bars[i-2], c1 = bars[i-1], c2 = bars[i];
+        // Bullish FVG: gap between c0.high and c2.low
+        if (c2.low > c0.high) {
+          fvgs.push({ type: 'bull', top: c2.low, bottom: c0.high, i, filled: false });
+        }
+        // Bearish FVG
+        if (c2.high < c0.low) {
+          fvgs.push({ type: 'bear', top: c0.low, bottom: c2.high, i, filled: false });
+        }
+      }
+      // Mark filled
+      fvgs.forEach(f => {
+        for (let k = f.i + 1; k < bars.length; k++) {
+          if (f.type === 'bull' && bars[k].low <= f.bottom) { f.filled = true; break; }
+          if (f.type === 'bear' && bars[k].high >= f.top)  { f.filled = true; break; }
+        }
+      });
+      return fvgs.filter(f => !f.filled).slice(-4);
+    }
+
+    function analyzeMarketStructure() {
+      const bars = (hourlyBars && hourlyBars.length >= 20) ? hourlyBars : recentBars;
+      if (!bars || bars.length < 15 || currentPrice == null) {
+        lastStructure = null;
+        return null;
+      }
+
+      const swings = findSwings(bars, 2, 2);
+      const highs = swings.filter(s => s.type === 'H');
+      const lows  = swings.filter(s => s.type === 'L');
+
+      // Recent swing sequence
+      let bias = 'Ranging';
+      let event = 'None';
+      let eventDetail = '';
+      if (highs.length >= 2 && lows.length >= 2) {
+        const lastH = highs[highs.length-1];
+        const prevH = highs[highs.length-2];
+        const lastL = lows[lows.length-1];
+        const prevL = lows[lows.length-2];
+
+        const hh = lastH.price > prevH.price;
+        const hl = lastL.price > prevL.price;
+        const lh = lastH.price < prevH.price;
+        const ll = lastL.price < prevL.price;
+
+        if (hh && hl) { bias = 'Bullish'; event = 'HH + HL'; }
+        else if (lh && ll) { bias = 'Bearish'; event = 'LH + LL'; }
+        else if (hh && ll) { bias = 'Ranging'; event = 'HH + LL (conflict)'; }
+        else if (lh && hl) { bias = 'Ranging'; event = 'LH + HL (conflict)'; }
+
+        // BOS / CHoCH detection (simplified)
+        const price = currentPrice;
+        if (bias === 'Bullish' && price > lastH.price) {
+          event = 'BOS ↑';
+          eventDetail = `Break of structure above ${lastH.price.toFixed(2)}`;
+        } else if (bias === 'Bearish' && price < lastL.price) {
+          event = 'BOS ↓';
+          eventDetail = `Break of structure below ${lastL.price.toFixed(2)}`;
+        } else if (bias === 'Bullish' && price < lastL.price) {
+          event = 'CHoCH ↓';
+          eventDetail = `Potential change of character below ${lastL.price.toFixed(2)}`;
+          bias = 'Bearish'; // early flip
+        } else if (bias === 'Bearish' && price > lastH.price) {
+          event = 'CHoCH ↑';
+          eventDetail = `Potential change of character above ${lastH.price.toFixed(2)}`;
+          bias = 'Bullish';
+        }
+      }
+
+      // Premium / Discount
+      const look = bars.slice(-24);
+      const rangeHigh = Math.max(...look.map(b => b.high));
+      const rangeLow  = Math.min(...look.map(b => b.low));
+      const eq = (rangeHigh + rangeLow) / 2;
+      const pos = (currentPrice - rangeLow) / (rangeHigh - rangeLow + 1e-9);
+      let zone = 'Equilibrium';
+      if (pos > 0.62) zone = 'Premium';
+      else if (pos < 0.38) zone = 'Discount';
+
+      // FVGs
+      const fvgs = detectFVGs(bars, 28);
+      const nearestFVG = fvgs.length ? fvgs[fvgs.length-1] : null;
+
+      // Key levels
+      const keyHigh = highs.length ? highs[highs.length-1].price : rangeHigh;
+      const keyLow  = lows.length  ? lows[lows.length-1].price  : rangeLow;
+
+      // Structure score for ensemble (-10 to +10)
+      let score = 0;
+      if (bias === 'Bullish') score += 3.5;
+      if (bias === 'Bearish') score -= 3.5;
+      if (event.startsWith('BOS ↑') || event.startsWith('CHoCH ↑')) score += 2.8;
+      if (event.startsWith('BOS ↓') || event.startsWith('CHoCH ↓')) score -= 2.8;
+      if (zone === 'Discount' && bias === 'Bullish') score += 1.5;
+      if (zone === 'Premium'  && bias === 'Bearish') score -= 1.5;
+      if (zone === 'Premium'  && bias === 'Bullish') score -= 0.8; // late
+      if (zone === 'Discount' && bias === 'Bearish') score += 0.8;
+      if (nearestFVG) {
+        if (nearestFVG.type === 'bull' && currentPrice > nearestFVG.bottom) score += 1.2;
+        if (nearestFVG.type === 'bear' && currentPrice < nearestFVG.top)   score -= 1.2;
+      }
+      score = Math.max(-8, Math.min(8, score));
+
+      lastStructure = {
+        bias, event, eventDetail, zone, score,
+        keyHigh, keyLow, eq, rangeHigh, rangeLow,
+        fvgs, nearestFVG,
+        pos: (pos * 100).toFixed(0)
+      };
+      return lastStructure;
+    }
+
+    function renderStructure() {
+      const s = lastStructure || analyzeMarketStructure();
+      if (!s) {
+        document.getElementById('structBias').textContent = '—';
+        document.getElementById('structEvent').textContent = '—';
+        document.getElementById('structZone').textContent = '—';
+        document.getElementById('structDetails').textContent = 'Need more price bars for structure analysis.';
+        document.getElementById('structLevels').innerHTML = '';
+        return;
+      }
+
+      const biasEl = document.getElementById('structBias');
+      biasEl.textContent = s.bias;
+      biasEl.className = 'pred-direction ' + (s.bias === 'Bullish' ? 'up' : s.bias === 'Bearish' ? 'down' : 'side');
+
+      const eventEl = document.getElementById('structEvent');
+      eventEl.textContent = s.event;
+      eventEl.className = 'pred-direction ' + (s.event.includes('↑') ? 'up' : s.event.includes('↓') ? 'down' : 'side');
+      eventEl.style.fontSize = '1rem';
+
+      const zoneEl = document.getElementById('structZone');
+      zoneEl.textContent = s.zone;
+      zoneEl.className = 'pred-direction ' + (s.zone === 'Discount' ? 'up' : s.zone === 'Premium' ? 'down' : 'side');
+      zoneEl.style.fontSize = '1rem';
+
+      let details = `Structure score: <b>${s.score > 0 ? '+' : ''}${s.score.toFixed(1)}</b> • Price at ${s.pos}% of recent range.`;
+      if (s.eventDetail) details += `<br>${s.eventDetail}`;
+      if (s.nearestFVG) {
+        details += `<br>Unfilled ${s.nearestFVG.type === 'bull' ? 'Bullish' : 'Bearish'} FVG: ${s.nearestFVG.bottom.toFixed(2)} – ${s.nearestFVG.top.toFixed(2)}`;
+      }
+      document.getElementById('structDetails').innerHTML = details;
+
+      document.getElementById('structLevels').innerHTML = `
+        <span style="margin-right:1rem;">Swing High: <b>$${formatPrice(s.keyHigh)}</b></span>
+        <span style="margin-right:1rem;">Equilibrium: <b>$${formatPrice(s.eq)}</b></span>
+        <span>Swing Low: <b>$${formatPrice(s.keyLow)}</b></span>
+      `;
+      renderStructChart(s);
+    }
+
+    function renderStructChart(s) {
+      const canvas = document.getElementById('structChart');
+      if (!canvas) return;
+      const bars = (hourlyBars && hourlyBars.length >= 12) ? hourlyBars.slice(-36) : (recentBars || []).slice(-30);
+      if (!bars.length) {
+        document.getElementById('structChartMeta').textContent = 'Waiting for OHLC data...';
+        return;
+      }
+
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const labels = bars.map(b => {
+        const d = new Date(b.openTime);
+        return (hourlyBars && hourlyBars.length >= 12)
+          ? d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })
+          : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      });
+
+      // Build candlestick-compatible data (index-based for reliability)
+      const candleData = bars.map((b, i) => ({
+        x: i,
+        o: b.open,
+        h: b.high,
+        l: b.low,
+        c: b.close
+      }));
+
+      const makeLevel = (price, color, dash = [5, 3]) => ({
+        type: 'line',
+        label: '',
+        data: bars.map((_, i) => ({ x: i, y: price })),
+        borderColor: color,
+        borderWidth: 1.3,
+        borderDash: dash,
+        pointRadius: 0,
+        fill: false,
+        order: 0,
+        yAxisID: 'y'
+      });
+
+      const datasets = [];
+
+      // Prefer native candlestick if plugin loaded, otherwise fallback to high-low + body simulation
+      const hasCandle = !!(window.Chart && Chart.registry && Chart.registry.getController && Chart.registry.getController('candlestick'));
+
+      if (hasCandle) {
+        datasets.push({
+          type: 'candlestick',
+          label: 'XAUUSD',
+          data: candleData,
+          color: { up: '#10b981', down: '#ef4444', unchanged: '#94a3b8' },
+          borderColor: { up: '#059669', down: '#dc2626', unchanged: '#94a3b8' },
+          order: 2,
+          yAxisID: 'y'
+        });
+      } else {
+        // Fallback: wick (high-low) + body (open-close) using bar charts
+        datasets.push({
+          type: 'bar',
+          label: 'Wick',
+          data: bars.map((b, i) => ({ x: i, y: [b.low, b.high] })),
+          backgroundColor: bars.map(b => b.close >= b.open ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
+          borderWidth: 0,
+          barThickness: 2,
+          order: 1,
+          yAxisID: 'y'
+        });
+        datasets.push({
+          type: 'bar',
+          label: 'Body',
+          data: bars.map((b, i) => ({ x: i, y: [Math.min(b.open, b.close), Math.max(b.open, b.close)] })),
+          backgroundColor: bars.map(b => b.close >= b.open ? '#10b981' : '#ef4444'),
+          borderWidth: 0,
+          barThickness: 6,
+          order: 2,
+          yAxisID: 'y'
+        });
+      }
+
+      if (s) {
+        datasets.push(makeLevel(s.keyHigh, 'rgba(239,68,68,0.9)'));
+        datasets.push(makeLevel(s.keyLow,  'rgba(16,185,129,0.9)'));
+        datasets.push(makeLevel(s.eq,      'rgba(245,158,11,0.85)', [2, 2]));
+        if (s.nearestFVG) {
+          const mid = (s.nearestFVG.top + s.nearestFVG.bottom) / 2;
+          datasets.push(makeLevel(mid, s.nearestFVG.type === 'bull' ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)', [8, 4]));
+        }
+      }
+
+      if (structChart) {
+        try { structChart.destroy(); } catch {}
+        structChart = null;
+      }
+
+      const ctx = canvas.getContext('2d');
+      const cfg = {
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: (item) => hasCandle ? item.dataset.type === 'candlestick' : item.dataset.label === 'Body',
+              callbacks: {
+                title: (items) => labels[items[0]?.dataIndex] || '',
+                label: (ctx) => {
+                  const b = bars[ctx.dataIndex];
+                  if (!b) return '';
+                  return `O ${formatPrice(b.open)}  H ${formatPrice(b.high)}  L ${formatPrice(b.low)}  C ${formatPrice(b.close)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'category',
+              labels,
+              ticks: { color: isDark ? '#94a3b8' : '#64748b', maxTicksLimit: 8, font: { size: 10 }, maxRotation: 0 },
+              grid: { display: false }
+            },
+            y: {
+              position: 'right',
+              ticks: {
+                color: isDark ? '#94a3b8' : '#64748b',
+                callback: v => '$' + Number(v).toFixed(0),
+                font: { size: 10 }
+              },
+              grid: { color: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(100,116,139,0.1)' }
+            }
+          }
+        }
+      };
+
+      if (hasCandle) {
+        cfg.type = 'candlestick';
+      } else {
+        cfg.type = 'bar';
+        // floating bars need this
+        cfg.options.scales.y.beginAtZero = false;
+      }
+
+      try {
+        structChart = new Chart(ctx, cfg);
+      } catch (e) {
+        console.warn('Struct chart error, retrying fallback', e);
+        // force fallback
+        cfg.type = 'bar';
+        cfg.data.datasets = cfg.data.datasets.filter(d => d.type !== 'candlestick');
+        if (!cfg.data.datasets.some(d => d.label === 'Body')) {
+          cfg.data.datasets.unshift({
+            type: 'bar',
+            label: 'Body',
+            data: bars.map((b, i) => ({ x: i, y: [Math.min(b.open, b.close), Math.max(b.open, b.close)] })),
+            backgroundColor: bars.map(b => b.close >= b.open ? '#10b981' : '#ef4444'),
+            borderWidth: 0,
+            barThickness: 6,
+            order: 2
+          });
+        }
+        structChart = new Chart(ctx, cfg);
+      }
+
+      const tf = (hourlyBars && hourlyBars.length >= 12) ? '1H' : '1D';
+      document.getElementById('structChartMeta').textContent =
+        `Live ${tf} candlesticks (${bars.length}) • Red dashed = Swing High • Green = Swing Low • Amber = Equilibrium` +
+        (s?.nearestFVG ? ` • FVG mid line` : '');
+    }
+
+    /**
+     * AI Pre-Move Engine – Ensemble v3 + Market Structure
+     * -------------------------------------------------
+     * Client-side ensemble with four specialist models:
+     *   • News AI        – sentiment force + velocity
+     *   • Technical AI   – multi-TF momentum + ATR regime
+     *   • Macro AI       – calendar pressure
+     *   • Structure AI   – Market Maker structure (BOS/CHoCH, FVG, Premium/Discount)
+     */
+    function computePrediction(horizonDays) {
+      if (currentPrice == null) {
+        return {
+          dir: 'SIDEWAYS', cls: 'side', low: null, high: null,
+          expectedPct: '0.00', conf: '—', signal: 'No Data',
+          probUp: 50, drivers: [], factors: {}, reasoning: 'Waiting for price data...'
+        };
+      }
+
+      const now = Date.now();
+      const drivers = [];
+
+      // ========== NEWS AI ==========
+      let newsForce = 0, newsWeightSum = 0, recentHighImpact = 0;
+      scoredNews.slice(0, 30).forEach((s, i) => {
+        const ageFactor = Math.exp(-i * 0.155);
+        const magBoost  = 1 + Math.pow(Math.abs(s.score)/10, 1.6) * 2.25;
+        const w = ageFactor * magBoost;
+        newsForce += s.score * w;
+        newsWeightSum += w;
+        if (Math.abs(s.score) >= 4 && i < 8) recentHighImpact++;
+        if (Math.abs(s.score) >= 3) drivers.push({ title: s.title, score: s.score, weight: w });
+      });
+      newsForce = newsWeightSum > 0 ? newsForce / newsWeightSum : 0;
+      const velocityBoost = 1 + Math.min(0.38, recentHighImpact * 0.095);
+      const newsScore = newsForce * velocityBoost;          // specialist output
+
+      // ========== TECHNICAL AI (uses hourly for short horizons = more precise) ==========
+      let momShort = 0, momMed = 0;
+      // Prefer hourly bars for short-term (2-day) precision
+      const useHourly = horizonDays <= 3 && hourlyBars && hourlyBars.length >= 12;
+      const tfBars = useHourly ? hourlyBars : recentBars;
+      if (tfBars && tfBars.length >= 6) {
+        const closes = tfBars.map(b => b.close);
+        const last = closes[closes.length - 1];
+        const lbS = useHourly ? Math.min(6, closes.length - 1) : Math.min(3, closes.length - 1); // ~6h or 3d
+        if (closes[closes.length-1-lbS] > 0)
+          momShort = ((last - closes[closes.length-1-lbS]) / closes[closes.length-1-lbS]) * 100;
+        const lbM = useHourly ? Math.min(18, closes.length - 1) : Math.min(horizonDays <= 5 ? 7 : 11, closes.length - 1);
+        if (closes[closes.length-1-lbM] > 0)
+          momMed = ((last - closes[closes.length-1-lbM]) / closes[closes.length-1-lbM]) * 100;
+        // Mean-reversion dampener
+        if (Math.abs(momShort) > (useHourly ? 0.9 : 2.5)) momShort *= 0.68;
+        if (Math.abs(momMed)   > (useHourly ? 1.8 : 4.2)) momMed   *= 0.74;
+      }
+      const momentum = momShort * 0.60 + momMed * 0.40;
+
+      // ATR from the same timeframe
+      let atrPct = 1.1;
+      if (tfBars && tfBars.length >= 8) {
+        let sum = 0;
+        const n = Math.min(useHourly ? 12 : 14, tfBars.length);
+        for (let i = tfBars.length - n; i < tfBars.length; i++) {
+          const b = tfBars[i];
+          sum += (b.high - b.low) / b.close * 100;
+        }
+        atrPct = sum / n;
+        if (useHourly) atrPct *= 2.2; // normalize hourly range to daily-ish scale
+      }
+      const volRegime = atrPct > 1.7 ? 'High' : atrPct > 1.05 ? 'Normal' : 'Low';
+      const volMult   = atrPct > 1.7 ? 1.30 : atrPct < 0.9 ? 0.80 : 1.0;
+      const techScore = momentum * 1.75 * (volMult > 1 ? 1.09 : 1);
+
+      // ========== MACRO AI ==========
+      let calendarBoost = 1.0, nearEvents = 0;
+      if (calendarEvents && calendarEvents.length) {
+        const horizonMs = horizonDays * 86400000;
+        calendarEvents.forEach(ev => {
+          const delta = new Date(ev.time).getTime() - now;
+          if (delta > -8*3600000 && delta < horizonMs) {
+            nearEvents++;
+            calendarBoost += 0.145 * Math.max(0, 1 - delta / horizonMs);
+          }
+        });
+        calendarBoost = Math.min(1.8, calendarBoost);
+      }
+      const macroScore = (nearEvents > 0 ? (newsScore !== 0 ? Math.sign(newsScore) : Math.sign(techScore)) * 1.8 : 0) * (calendarBoost - 1);
+
+      // ========== STRUCTURE AI (Market Maker) ==========
+      const struct = lastStructure || analyzeMarketStructure();
+      const structScore = struct ? struct.score : 0; // already -8..+8
+
+      // ========== ENSEMBLE (4 models) ==========
+      let wNews   = scoredNews.length >= 3 ? 0.36 : 0.22;
+      let wTech   = recentBars.length >= 8 ? 0.28 : 0.18;
+      let wMacro  = nearEvents > 0 ? 0.14 : 0.06;
+      let wStruct = struct ? 0.22 : 0.08;
+      const wSum = wNews + wTech + wMacro + wStruct;
+      wNews /= wSum; wTech /= wSum; wMacro /= wSum; wStruct /= wSum;
+
+      let combinedForce = newsScore * wNews + techScore * wTech + macroScore * wMacro + structScore * wStruct;
+
+      // Alignment: News + Structure or Tech + Structure agreement is powerful
+      const newsSign = Math.sign(newsScore) || 0;
+      const techSign = Math.sign(techScore) || 0;
+      const structSign = Math.sign(structScore) || 0;
+      const aligned  = (newsSign !== 0 && newsSign === structSign) || (techSign !== 0 && techSign === structSign);
+      const strongAligned = newsSign !== 0 && techSign !== 0 && newsSign === techSign && newsSign === structSign;
+      const conflict = (newsSign !== 0 && structSign !== 0 && newsSign !== structSign) &&
+                       (techSign !== 0 && structSign !== 0 && techSign !== structSign);
+      const alignmentMult = strongAligned ? 1.55 : aligned ? 1.32 : (conflict ? 0.65 : 1.0);
+      combinedForce *= alignmentMult;
+
+      // Time scaling + soft mean-reversion
+      const timeScale = Math.sqrt(horizonDays / 2.05);
+      let expectedPct = combinedForce * 0.255 * timeScale * calendarBoost * volMult;
+      if (Math.sign(expectedPct) === Math.sign(momMed) && Math.abs(momMed) > 3.3) expectedPct *= 0.80;
+      expectedPct = Math.max(-7.5, Math.min(7.5, expectedPct));
+
+      // Range
+      const baseVol = 0.76 + Math.abs(combinedForce)*0.105 + nearEvents*0.075 + atrPct*0.17;
+      const rangePct = baseVol * timeScale * (aligned ? 0.80 : 1.20);
+      const mid  = currentPrice * (1 + expectedPct/100);
+      const low  = mid * (1 - rangePct/100);
+      const high = mid * (1 + rangePct/100);
+
+      // Direction & probability
+      let dir = 'SIDEWAYS', cls = 'side', probUp = 50;
+      if (expectedPct > 0.22) {
+        dir = 'BULLISH ▲'; cls = 'up';
+        probUp = Math.min(94, 54 + Math.abs(expectedPct)*8.8 + (aligned?10:0) + recentHighImpact*1.6);
+      } else if (expectedPct < -0.22) {
+        dir = 'BEARISH ▼'; cls = 'down';
+        probUp = Math.max(6, 46 - Math.abs(expectedPct)*8.8 - (aligned?10:0) - recentHighImpact*1.6);
+      } else {
+        probUp = 50 + expectedPct * 15;
+      }
+
+      // Signal strength
+      const absForce = Math.abs(combinedForce);
+      let signal = 'Weak';
+      if (absForce > 4.6 && aligned && recentHighImpact >= 2) signal = 'Very Strong';
+      else if (absForce > 3.4 || (absForce > 2.5 && aligned)) signal = 'Strong';
+      else if (absForce > 1.55) signal = 'Moderate';
+
+      // Confidence
+      const confNum = Math.min(96,
+        26 + Math.abs(newsForce)*5.2 + (aligned?15:0) +
+        Math.min(scoredNews.length,16)*1.45 + (nearEvents>0?8:0) +
+        (recentBars.length>=8?7:0) + recentHighImpact*2.6
+      );
+
+      // ========== AI REASONING (natural language) ==========
+      let reasoning = '';
+      if (scoredNews.length === 0 && recentBars.length < 5) {
+        reasoning = 'AI waiting for news scores and price history to form a view.';
+      } else {
+        const parts = [];
+        if (Math.abs(newsForce) > 1.2) {
+          parts.push(newsForce > 0
+            ? `News AI detects bullish sentiment force (${newsForce.toFixed(1)}) with ${recentHighImpact} recent high-impact items`
+            : `News AI detects bearish sentiment force (${newsForce.toFixed(1)}) with ${recentHighImpact} recent high-impact items`);
+        }
+        if (Math.abs(momentum) > 0.6) {
+          parts.push(momentum > 0
+            ? `Technical AI sees positive multi-TF momentum (+${momentum.toFixed(1)}%)`
+            : `Technical AI sees negative multi-TF momentum (${momentum.toFixed(1)}%)`);
+        }
+        if (struct) {
+          parts.push(`Structure AI: ${struct.bias} bias, ${struct.event}, price in ${struct.zone} zone (score ${struct.score > 0 ? '+' : ''}${struct.score.toFixed(1)})`);
+        }
+        if (nearEvents > 0) {
+          parts.push(`Macro AI flags ${nearEvents} high-impact US event(s) (boost ${calendarBoost.toFixed(2)}x)`);
+        }
+        if (strongAligned) parts.push('All models strongly aligned → very high conviction');
+        else if (aligned) parts.push('Structure confirms other models → high conviction');
+        else if (conflict) parts.push('Structure conflicts with other models → signal dampened');
+        if (volRegime === 'High') parts.push('Elevated volatility regime widens expected range');
+        if (parts.length === 0) parts.push('Mixed / low-conviction inputs – AI remains neutral');
+        reasoning = parts.join('. ') + '.';
+      }
+
+      return {
+        dir, cls,
+        low:  Math.round(low*100)/100,
+        high: Math.round(high*100)/100,
+        expectedPct: expectedPct.toFixed(2),
+        conf: confNum.toFixed(0) + '%',
+        signal,
+        probUp: Math.round(probUp),
+        drivers: drivers.sort((a,b) => Math.abs(b.score)-Math.abs(a.score)).slice(0,6),
+        reasoning,
+        factors: {
+          newsForce: newsForce.toFixed(2),
+          newsScore: newsScore.toFixed(2),
+          techScore: techScore.toFixed(2),
+          macroScore: macroScore.toFixed(2),
+          structScore: structScore.toFixed(2),
+          structBias: struct ? struct.bias : '—',
+          structEvent: struct ? struct.event : '—',
+          structZone: struct ? struct.zone : '—',
+          momentum: momentum.toFixed(2),
+          momShort: momShort.toFixed(2),
+          momMed: momMed.toFixed(2),
+          atrPct: atrPct.toFixed(2),
+          volRegime,
+          calendarBoost: calendarBoost.toFixed(2),
+          velocityBoost: velocityBoost.toFixed(2),
+          aligned, strongAligned, nearEvents, recentHighImpact,
+          wNews: (wNews*100).toFixed(0)+'%',
+          wTech: (wTech*100).toFixed(0)+'%',
+          wMacro: (wMacro*100).toFixed(0)+'%',
+          wStruct: (wStruct*100).toFixed(0)+'%'
+        }
+      };
+    }
+
+    function schedulePredictions() {
+      if (predScheduled) return;
+      predScheduled = true;
+      // Use microtask so multiple rapid calls collapse into one
+      Promise.resolve().then(() => {
+        predScheduled = false;
+        updatePredictions();
+      });
+    }
+
+    function updatePredictions() {
+      if (currentPrice == null) return;
+
+      // Fast cache key – skip full recompute if inputs unchanged
+      const key = currentPrice + '|' + scoredNews.length + '|' + (scoredNews[0]?.score||0) + '|' +
+                  recentBars.length + '|' + (recentBars[recentBars.length-1]?.close||0) + '|' +
+                  calendarEvents.length;
+      if (key === predCacheKey && predCache) {
+        renderPredictions(predCache.p2, predCache.p7, predCache.p30);
+        return;
+      }
+
+      const p2  = computePrediction(2);
+      const p7  = computePrediction(7);
+      const p30 = computePrediction(30);
+      predCacheKey = key;
+      predCache = { p2, p7, p30 };
+      renderPredictions(p2, p7, p30);
+    }
+
+    function renderPredictions(p2, p7, p30) {
+      setPred('pred2d', 'range2d', p2);
+      setPred('pred1w', 'range1w', p7);
+      setPred('pred1m', 'range1m', p30);
+
+      if (lsDir) {
+        lsDir.textContent = p2.dir;
+        lsDir.style.color = p2.cls === 'up' ? 'var(--accent2)' : p2.cls === 'down' ? 'var(--danger)' : 'var(--muted)';
+      }
+      if (lsStr) {
+        lsStr.textContent = 'Signal: ' + p2.signal;
+        lsStr.style.color = p2.signal === 'Very Strong' || p2.signal === 'Strong' ? 'var(--accent)' : 'var(--muted)';
+      }
+      if (lsMeta) {
+        lsMeta.textContent = p2.low != null
+          ? `2-day target: $${formatPrice(p2.low)} – $${formatPrice(p2.high)} (${p2.expectedPct > 0 ? '+' : ''}${p2.expectedPct}%)`
+          : 'Score news + load chart for AI inference';
+      }
+      if (lsProb) lsProb.textContent = p2.probUp + '%';
+      if (lsConf) lsConf.textContent = p2.conf;
+
+      // AI natural-language reasoning
+      const reasonEl = document.getElementById('aiReasoning');
+      if (reasonEl) {
+        reasonEl.textContent = p2.reasoning || '';
+      }
+      // Keep structure panel in sync
+      renderStructure();
+
+      // Drivers + ensemble factor breakdown
+      const ul = document.getElementById('driversList');
+      if (ul) {
+        let html = '';
+        if (p2.drivers.length) {
+          html += p2.drivers.map(d =>
+            `<li><strong style="color:${d.score>0?'var(--accent2)':'var(--danger)'}">${d.score>0?'+':''}${d.score}</strong> — ${(d.title||'').slice(0,85)}${(d.title||'').length>85?'…':''}</li>`
+          ).join('');
+        } else {
+          html += '<li>No high-impact scored news yet. Score news to activate the AI engine.</li>';
+        }
+        if (p2.factors) {
+          const f = p2.factors;
+          html += `<li style="margin-top:0.7rem;color:var(--muted);font-size:0.81rem;line-height:1.55">
+            <b>Ensemble AI internals (4 models)</b><br>
+            News AI: <b>${f.newsScore}</b> • Tech AI: <b>${f.techScore}</b> • Macro AI: <b>${f.macroScore}</b><br>
+            Structure AI: <b>${f.structScore}</b> (${f.structBias}, ${f.structEvent}, ${f.structZone})<br>
+            Weights → News <b>${f.wNews}</b> • Tech <b>${f.wTech}</b> • Macro <b>${f.wMacro}</b> • Struct <b>${f.wStruct}</b><br>
+            Vol: <b>${f.volRegime}</b> • Aligned: <b>${f.strongAligned ? 'Strong ✓✓' : f.aligned ? 'Yes ✓' : 'No'}</b> • High-impact: <b>${f.recentHighImpact}</b>
+          </li>`;
+        }
+        ul.innerHTML = html;
+      }
+    }
+
+    function setPred(dirId, rangeId, p, confId) {
+      const d = document.getElementById(dirId);
+      if (!d) return;
+      d.textContent = p.dir;
+      d.className = 'pred-direction ' + p.cls;
+      const r = document.getElementById(rangeId);
+      if (r) {
+        if (p.low != null) {
+          r.textContent = `$${formatPrice(p.low)} – $${formatPrice(p.high)} (${p.expectedPct > 0 ? '+' : ''}${p.expectedPct}%) • ${p.probUp}% up • ${p.signal}`;
+        } else {
+          r.textContent = '—';
+        }
+      }
+      if (confId) {
+        const c = document.getElementById(confId);
+        if (c) c.textContent = 'Confidence: ' + p.conf + '  |  Signal: ' + p.signal;
+      }
+    }
+
+    // ========== NOTIFICATIONS ==========
+    function notify(title, body) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      new Notification(title, { body, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🥇</text></svg>' });
+    }
+
+    // ========== NAV ==========
+    document.querySelectorAll('nav button[data-section]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button[data-section]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(btn.dataset.section).classList.add('active');
+      });
+    });
+
+    // ========== EVENTS ==========
+    document.getElementById('refreshPrice').addEventListener('click', fetchPrice);
+    document.getElementById('scanNews').addEventListener('click', scanNews);
+    document.getElementById('loadCalendar').addEventListener('click', loadCalendar);
+    document.getElementById('recalcPred').addEventListener('click', () => { predCacheKey = ''; updatePredictions(); toast('Recalculated'); });
+
+    document.getElementById('clearScores').addEventListener('click', () => {
+      if (confirm('Clear all recorded impact scores?')) {
+        scoredNews = [];
+        localStorage.removeItem('xau_scored');
+        renderScoresTable();
+        updateAggregate();
+        schedulePredictions();
+        toast('Cleared');
+      }
+    });
+
+    document.getElementById('exportScores').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(scoredNews, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'xauusd-impact-scores.json';
+      a.click();
+    });
+
+    document.getElementById('importScores').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (Array.isArray(data)) {
+            scoredNews = data;
+            localStorage.setItem('xau_scored', JSON.stringify(scoredNews));
+            renderScoresTable();
+            updateAggregate();
+            schedulePredictions();
+            toast('Imported ' + data.length + ' scores');
+          }
+        } catch { toast('Invalid JSON'); }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('clearCache').addEventListener('click', () => {
+      localStorage.removeItem('xau_news_cache');
+      localStorage.removeItem('xau_price_cache');
+      localStorage.removeItem('xau_ohlc_cache');
+      localStorage.removeItem('xau_hourly_cache');
+      localStorage.removeItem('xau_cal_cache');
+      cachedNews = [];
+      hourlyBars = [];
+      toast('Cache cleared');
+    });
+
+    function setupAutoRefresh() {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      if (document.getElementById('autoRefresh').checked && isOnline) {
+        autoRefreshInterval = setInterval(fetchPrice, 25000); // 25s for live precision
+      }
+    }
+    document.getElementById('autoRefresh').addEventListener('change', setupAutoRefresh);
+
+    document.getElementById('notifToggle').addEventListener('change', async (e) => {
+      if (e.target.checked && Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+    });
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+    document.getElementById('installPwa').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        toast(outcome === 'accepted' ? 'Installed!' : 'Cancelled');
+        deferredPrompt = null;
+      } else {
+        toast('Use browser menu → Install / Add to Home Screen');
+      }
+    });
+
+    window.addEventListener('online', () => {
+      updateOnlineStatus();
+      fetchPrice();
+      loadChart();
+      setupAutoRefresh();
+      toast('Back online');
+    });
+    window.addEventListener('offline', () => {
+      updateOnlineStatus();
+      toast('Offline – using cached data');
+    });
+
+    // Register SW early but non-blocking
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+
+    // INIT – prioritise first paint, then data
+    updateOnlineStatus();
+    try {
+      const calCache = localStorage.getItem('xau_cal_cache');
+      if (calCache) calendarEvents = JSON.parse(calCache);
+      const hCache = localStorage.getItem('xau_hourly_cache');
+      if (hCache) hourlyBars = JSON.parse(hCache);
+      const ohlcCache = localStorage.getItem('xau_ohlc_cache');
+      if (ohlcCache) recentBars = JSON.parse(ohlcCache);
+      const priceCache = localStorage.getItem('xau_price_cache');
+      if (priceCache) {
+        const p = JSON.parse(priceCache);
+        currentPrice = p.price;
+        renderPrice(p);
+      }
+    } catch {}
+    updateAggregate();
+    renderScoresTable();
+
+    // Live price immediately (light request)
+    fetchPrice();
+    setupAutoRefresh();
+
+    // Heavy work (charts + structure) after paint / when Chart.js is ready
+    function whenChartsReady(cb) {
+      if (window.Chart) return cb();
+      let n = 0;
+      const t = setInterval(() => {
+        if (window.Chart || ++n > 40) { clearInterval(t); cb(); }
+      }, 50);
+    }
+    const startHeavy = () => whenChartsReady(() => {
+      loadChart();
+      if (recentBars.length || hourlyBars.length) {
+        analyzeMarketStructure();
+        renderStructure();
+      }
+    });
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(startHeavy, { timeout: 1200 });
+    } else {
+      setTimeout(startHeavy, 60);
+    }
+  </script>
+</body>
+</html>
